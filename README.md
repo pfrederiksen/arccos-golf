@@ -74,18 +74,53 @@ Driver: 234 yds avg (533 shots, longest: 281)
 7 Iron: 140 yds avg (43 shots, longest: 168)
 ```
 
-## 📋 Data Requirements
+## 📋 Getting Your Arccos Data
 
-The analyzer expects a JSON file with Arccos Golf data including:
+Arccos Golf does not offer a public API, so data must be scraped from **https://dashboard.arccosgolf.com** using browser automation.
 
-- Golfer information and basic stats
-- Strokes gained metrics by category
-- Club distance and shot count data
-- Scoring averages and distribution
-- Putting performance metrics
-- Recent round history
+### Recommended: browser-use
 
-See [SKILL.md](SKILL.md) for complete data format specification.
+[browser-use](https://github.com/browser-use/browser-use) is an AI-powered browser automation library that can navigate the Arccos dashboard and extract your stats.
+
+```bash
+pip install browser-use langchain-openai
+```
+
+```python
+import asyncio
+from browser_use import Agent, Browser, ChatBrowserUse
+
+async def main():
+    browser = Browser(use_cloud=True)
+    llm = ChatBrowserUse()
+    agent = Agent(
+        task="""Log into https://dashboard.arccosgolf.com/login with my credentials.
+        Extract all stats: Strokes Gained, club distances, scoring, GIR,
+        driving accuracy, putting, short game, and recent rounds.
+        Save as JSON to arccos-data.json""",
+        llm=llm, browser=browser,
+    )
+    await agent.run(max_steps=60)
+
+asyncio.run(main())
+```
+
+### What to scrape
+
+The Arccos dashboard has two versions — scrape both for complete data:
+
+| Section | Dashboard | Data |
+|---------|-----------|------|
+| SG Breakdown | New (`/stats/overall`) | Driving, Approach, Short, Putting |
+| Driving | New (`/stats/driving`) | Fairways %, distance, SG by hole length |
+| Approach | New (`/stats/approach`) | GIR %, miss patterns, SG by distance |
+| Short Game | New (`/stats/short`) | Up & Down %, sand saves |
+| Putting | New (`/stats/putting`) | Putts/hole, SG by putt length |
+| Scoring Mix | v1 (`/overall performance`) | Birdie/par/bogey/double+ % |
+| Club Distances | v1 (`/clubs` → Distance) | Avg distance per club |
+| Round History | v1 (`/rounds`) | Scores + per-category breakdown |
+
+See [SKILL.md](SKILL.md) for the complete expected JSON format.
 
 ## 🔒 Security & Privacy
 
@@ -138,4 +173,4 @@ This project is open source and available under the MIT License.
 
 ---
 
-**Note**: This analyzer processes pre-collected Arccos data. Data collection from the Arccos Golf platform requires separate browser automation tools and valid Arccos account credentials.
+**Note**: This skill analyzes pre-collected Arccos data. See the [Data Collection Guide](#-getting-your-arccos-data) above for how to scrape your stats from `dashboard.arccosgolf.com` using browser-use.

@@ -47,7 +47,7 @@ This skill is designed for **data analysis only** and explicitly does NOT:
 - **No credential handling**: Does not store, read, or manage login credentials
 - **No data collection**: Does not gather data from Arccos sensors or dashboard
 
-**Note on Data Collection**: Arccos data collection must be performed separately by the OpenClaw agent using browser automation tools to access the Arccos Golf dashboard. This skill only processes the already-collected data file.
+**Data Collection**: Arccos does not offer a public API. To collect your data, use browser automation (e.g., browser-use) to scrape the Arccos dashboard. See the **Data Collection Guide** section below for step-by-step instructions.
 
 ## Resources
 
@@ -98,6 +98,88 @@ python3 scripts/arccos_golf.py /path/to/arccos-data.json --format json
 ```bash
 # Last 10 rounds
 python3 scripts/arccos_golf.py /path/to/arccos-data.json --recent-rounds 10
+```
+
+## Data Collection Guide
+
+Arccos Golf does not provide a public API. To populate the data file this skill analyzes, you need to scrape your stats from **https://dashboard.arccosgolf.com**.
+
+### Using browser-use (Recommended)
+
+[browser-use](https://github.com/browser-use/browser-use) is a Python library for AI-powered browser automation. Install it in a virtual environment:
+
+```bash
+pip install browser-use langchain-openai
+```
+
+Then run the following to scrape your Arccos data:
+
+```python
+import asyncio
+from browser_use import Agent, Browser, ChatBrowserUse
+
+async def main():
+    browser = Browser(use_cloud=True)  # or headless=True for local
+    llm = ChatBrowserUse()
+
+    agent = Agent(
+        task="""Go to https://dashboard.arccosgolf.com/login and log in with:
+        Email: YOUR_EMAIL
+        Password: YOUR_PASSWORD
+
+        After login, navigate to each section and extract:
+
+        1. Overall Game tab: Handicap, total shots, total rounds, SG breakdown
+           (Driving, Approach, Short, Putting), par averages (3/4/5)
+        2. Driving Game tab: Fairways hit %, miss left/right %, avg distance,
+           SG by hole length and shape
+        3. Approach Game tab: GIR %, approach distribution, SG by distance/terrain
+        4. Short Game tab: Up & Down % (0-25y, 25-50y), Sand saves
+        5. Putting Game tab: Putts per hole/GIR, SG by putt distance
+        6. Switch to v1 dashboard ("Go to v1 of Dashboard" button):
+           - Scoring breakdown (birdies/pars/bogeys/double+ %)
+           - Driving accuracy (left/center/right %)
+           - Club Usage section: average distance per club
+           - Rounds section: recent round scores with SG breakdown
+
+        Save all data as JSON to arccos-data.json""",
+        llm=llm,
+        browser=browser,
+    )
+
+    result = await agent.run(max_steps=60)
+    print(result)
+
+asyncio.run(main())
+```
+
+### What to Scrape
+
+The Arccos dashboard has two versions. Both contain useful data:
+
+**New Dashboard** (`dashboard.arccosgolf.com`):
+- **Overall Game** → Handicap, SG breakdown, par averages
+- **Driving Game** → Fairways hit %, distance, SG by hole length/shape
+- **Approach Game** → GIR %, miss patterns, SG by distance/terrain
+- **Short Game** → Up & Down %, sand saves, chipping stats
+- **Putting Game** → Putts per hole/GIR, SG by putt length
+
+**v1 Dashboard** (`old.dashboard.arccosgolf.com`):
+- **Overall Performance** → Scoring breakdown (birdie/par/bogey %), driving accuracy
+- **Club Usage → Distance** → Average distance per club
+- **Rounds** → Round-by-round scores with per-category handicap breakdown
+
+### Scheduling Data Collection
+
+Set up a weekly cron in OpenClaw to keep your data fresh:
+
+```bash
+openclaw cron create \
+  --name "Arccos Stats Sync" \
+  --schedule "0 17 * * 0" \
+  --tz "America/Los_Angeles" \
+  --message "Scrape Arccos dashboard using browser-use and update arccos-data.json" \
+  --isolated
 ```
 
 ## Expected Data Format
