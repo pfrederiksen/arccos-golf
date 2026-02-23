@@ -76,68 +76,34 @@ Driver: 234 yds avg (533 shots, longest: 281)
 
 ## 📋 Getting Your Arccos Data
 
-⚠️ **PRIVACY NOTICE**: The following data collection guide involves browser automation with cloud services and credential transmission. Consider privacy implications before proceeding.
+**Data Collection Required:** Arccos Golf does not offer a public API, so data must be collected separately from **https://dashboard.arccosgolf.com** before using this analysis skill.
 
-Arccos Golf does not offer a public API, so data must be scraped from **https://dashboard.arccosgolf.com** using browser automation.
+**This skill does NOT perform data collection.** It only analyzes pre-existing JSON data files.
 
-### Recommended: browser-use (Privacy Considerations)
+### Data Collection Options
 
-**⚠️ External Services Involved:**
-- **Cloud browser service** (browser-use API) - receives your Arccos login credentials
-- **LLM provider** (OpenAI/Anthropic via ChatBrowserUse) - processes golf data and credentials  
-- **Arccos dashboard** - accessed via cloud browser with your credentials
+1. **Manual Export** (Most Secure): Log into Arccos dashboard manually and export your data
+2. **Browser Automation** (Privacy Risk): Use tools like browser-use, Selenium, or Playwright to scrape data
+3. **OpenClaw Agent**: Let your OpenClaw agent handle the scraping using browser-use
 
-**Alternative**: For maximum privacy, manually export your Arccos data and create the JSON file locally.
+⚠️ **Important:** Any automated data collection method will require transmitting your Arccos credentials to external services. This skill itself never handles credentials or performs network requests.
 
-[browser-use](https://github.com/browser-use/browser-use) is an AI-powered browser automation library that can navigate the Arccos dashboard and extract your stats.
+### Required Data Sections
 
-```bash
-pip install browser-use langchain-openai
-```
+The Arccos dashboard has two versions — collect data from both for complete analysis:
 
-```python
-import asyncio
-from browser_use import Agent, Browser, ChatBrowserUse
-
-async def main():
-    # WARNING: This sends your Arccos credentials to cloud services
-    browser = Browser(use_cloud=True)  # Cloud browser service
-    llm = ChatBrowserUse()  # Requires OpenAI API key
-    agent = Agent(
-        task="""Log into https://dashboard.arccosgolf.com/login with my credentials.
-        Extract all stats: Strokes Gained, club distances, scoring, GIR,
-        driving accuracy, putting, short game, and recent rounds.
-        Save as JSON to arccos-data.json""",
-        llm=llm, browser=browser,
-    )
-    await agent.run(max_steps=60)
-
-asyncio.run(main())
-```
-
-**Credentials Required:**
-- Arccos login credentials (transmitted to cloud browser)  
-- OpenAI API key (for ChatBrowserUse LLM)
-- browser-use cloud service access
-
-### What to scrape
-
-The Arccos dashboard has two versions — scrape both for complete data:
-
-| Section | Dashboard | Data |
-|---------|-----------|------|
-| SG Breakdown | New (`/stats/overall`) | Driving, Approach, Short, Putting |
+| Section | Dashboard | Data Needed |
+|---------|-----------|-------------|
+| SG Breakdown | New (`/stats/overall`) | Driving, Approach, Short Game, Putting |
 | Driving | New (`/stats/driving`) | Fairways %, distance, SG by hole length |
 | Approach | New (`/stats/approach`) | GIR %, miss patterns, SG by distance |
 | Short Game | New (`/stats/short`) | Up & Down %, sand saves |
 | Putting | New (`/stats/putting`) | Putts/hole, SG by putt length |
 | Scoring Mix | v1 (`/overall performance`) | Birdie/par/bogey/double+ % |
-| Club Distances | v1 (`/clubs` → Distance) | Avg distance per club |
+| Club Distances | v1 (`/clubs` → Distance) | Average distance per club |
 | Round History | v1 (`/rounds`) | Scores + per-category breakdown |
 
 See [SKILL.md](SKILL.md) for the complete expected JSON format.
-
-**Privacy Reminder:** The above method transmits your Arccos credentials and golf performance data to cloud services. For sensitive data, consider manual data export instead.
 
 ## 🔒 Security & Privacy
 
